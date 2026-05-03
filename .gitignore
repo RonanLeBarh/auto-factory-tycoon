@@ -1,0 +1,6 @@
+# Ignorer les fichiers inutiles
+.DS_Store
+Thumbs.db
+node_modules/
+.vscode/
+*.log

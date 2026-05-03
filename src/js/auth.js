@@ -1,0 +1,1 @@
+// Prévu pour future intégration Firebase - vide pour l'instant

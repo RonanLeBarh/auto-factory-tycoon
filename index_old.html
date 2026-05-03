@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto-Factory Tycoon - V1 (Quêtes & Events)</title>
+    <style>
+        :root {
+            --bg: #0f172a; --card: #1e293b; --text: #e2e8f0;
+            --blue: #3b82f6; --purple: #a855f7; --green: #22c55e;
+            --gold: #fbbf24; --red: #ef4444; --cyan: #06b6d4; --orange: #f97316; --pink: #ec4899;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 1000px; background: var(--card); border-radius: 12px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+        h1, h2, h3 { margin-top: 0; color: var(--gold); }
+        .stat-box { background: #0f172a; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--blue); }
+        .res-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .big-text { font-size: 1.8em; font-weight: bold; color: var(--gold); }
+        .sub-text { font-size: 0.9em; color: #94a3b8; }
+        .data-text { color: var(--cyan); font-weight: bold; }
+
+        .btn { padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 8px; transition: 0.2s; }
+        .btn:active { transform: scale(0.98); }
+        .btn-buy { background: var(--blue); color: white; display: flex; justify-content: space-between; align-items: center; }
+        .btn-buy:disabled { background: #475569; cursor: not-allowed; opacity: 0.6; }
+        
+        /* Styles Overclock Tiers */
+        .tier-btn { margin-bottom: 10px; border: 1px solid transparent; }
+        .tier-1 { background: linear-gradient(45deg, var(--cyan), #0ea5e9); color: white; }
+        .tier-2 { background: linear-gradient(45deg, var(--orange), #f97316); color: white; }
+        .tier-3 { background: linear-gradient(45deg, var(--purple), #a855f7); color: white; }
+        .tier-4 { background: linear-gradient(45deg, var(--pink), #db2777); color: white; }
+        
+        .tier-btn:disabled { background: #334155; border-color: #475569; cursor: not-allowed; opacity: 0.5; filter: grayscale(1); }
+        
+        .btn-reset { background: var(--red); color: white; margin-top: 20px; }
+        
+        .shop-item { background: #0f172a; padding: 10px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #334155; }
+        .shop-header { display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: bold; }
+        .shop-desc { font-size: 0.85em; color: #94a3b8; }
+        .count-badge { background: var(--purple); padding: 2px 8px; border-radius: 10px; font-size: 0.8em; }
+
+        .branch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        .branch-card { background: #334155; padding: 15px; border-radius: 8px; text-align: center; cursor: pointer; border: 2px solid transparent; }
+        .branch-card:hover { background: #475569; }
+        .branch-card.selected { border-color: white; background: #475569; }
+        .logic { color: var(--blue); } .magic { color: var(--purple); } .social { color: var(--green); }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 100; }
+        .modal-content { background: var(--card); padding: 30px; border-radius: 12px; text-align: center; max-width: 400px; border: 2px solid var(--cyan); animation: popIn 0.3s ease; }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        .hidden { display: none !important; }
+        .log-area { height: 120px; overflow-y: auto; background: #0f172a; padding: 10px; font-family: monospace; font-size: 0.85em; border-radius: 4px; margin-top: 10px; color: #cbd5e1; border: 1px solid #334155; }
+        
+        .overclock-active { color: var(--cyan); font-weight: bold; animation: pulse 1s infinite; }
+        .event-active { color: var(--green); font-weight: bold; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+        /* Quest Styles */
+        .quest-item { background: #1e293b; padding: 8px; margin-bottom: 5px; border-radius: 4px; border-left: 3px solid var(--gold); display: flex; justify-content: space-between; align-items: center; }
+        .quest-done { border-left-color: var(--green); opacity: 0.6; text-decoration: line-through; }
+        .quest-reward { color: var(--gold); font-weight: bold; }
+        .btn-claim { background: var(--gold); color: black; padding: 4px 8px; font-size: 0.8em; width: auto; margin: 0; }
+        .btn-claim:disabled { background: #475569; color: #94a3b8; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div>
+            <h2>Auto-Factory V5</h2>
+            <div class="res-row">
+                <span class="big-text"><span id="res-display">0</span> Pièces</span>
+                <span class="sub-text">/sec: <span id="bps-display">0</span></span>
+            </div>
+            <div class="res-row">
+                <span class="data-text"><span id="data-display">0</span> Données</span>
+                <span class="sub-text">/sec: <span id="dps-display">0</span></span>
+            </div>
+            <div class="sub-text" style="margin-top:5px;">
+                Prestige: <span id="prestige-display">x1.00</span> | 
+                Boost: <span id="oc-display" class="overclock-active">AUCUN</span> | 
+                Event: <span id="event-display" class="event-active">AUCUN</span>
+            </div>
+        </div>
+        <div id="branch-badge" class="sub-text" style="padding:5px 10px; background:#334155; border-radius:4px;">Aucune</div>
+    </div>
+
+    <!-- Écran de démarrage -->
+    <div id="start-screen">
+        <h3>Choisissez votre spécialisation</h3>
+        <div class="branch-grid">
+            <div class="branch-card logic" onclick="selectBranch('logic')">
+                <strong>Logique</strong><br><small>Prod x2.5<br>Risque panne</small>
+            </div>
+            <div class="branch-card magic" onclick="selectBranch('magic')">
+                <strong>Magie</strong><br><small>Prod x0.5<br>Bonus passif x3</small>
+            </div>
+            <div class="branch-card social" onclick="selectBranch('social')">
+                <strong>Social</strong><br><small>Prod x1.2<br>Données x2</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Jeu Principal -->
+    <div id="game-screen" class="hidden">
+        <div class="grid">
+            <!-- Colonne Gauche : Shop -->
+            <div>
+                <h3>Atelier (Pièces)</h3>
+                <div id="shop-container"></div>
+            </div>
+
+            <!-- Colonne Centrale : Overclock & Events -->
+            <div>
+                <div class="stat-box" style="border-color: var(--blue);">
+                    <h3>Action Manuelle</h3>
+                    <button class="btn btn-buy" style="background:#475569;" onclick="manualClick()">
+                        <span>PRODUIRE MANUELLEMENT</span>
+                        <span>+<span id="click-val">1</span></span>
+                    </button>
+                </div>
+
+                <div class="stat-box" style="border-color: var(--cyan);">
+                    <h3>Overclocking (Données)</h3>
+                    <p class="sub-text">Choisissez un niveau de boost.</p>
+                    
+                    <button id="btn-oc-1" class="btn tier-btn tier-1" onclick="activateOverclock(1)">
+                        <div style="display:flex; justify-content:space-between;"><span>Niveau 1 (+50%)</span><span>50 Données</span></div><small>60s</small>
+                    </button>
+                    <button id="btn-oc-2" class="btn tier-btn tier-2" onclick="activateOverclock(2)" disabled>
+                        <div style="display:flex; justify-content:space-between;"><span>Niveau 2 (+100%)</span><span>200 Données</span></div><small>90s</small>
+                    </button>
+                    <button id="btn-oc-3" class="btn tier-btn tier-3" onclick="activateOverclock(3)" disabled>
+                        <div style="display:flex; justify-content:space-between;"><span>Niveau 3 (+200%)</span><span>1000 Données</span></div><small>120s</small>
+                    </button>
+                    <button id="btn-oc-4" class="btn tier-btn tier-4" onclick="activateOverclock(4)" disabled>
+                        <div style="display:flex; justify-content:space-between;"><span>Niveau 4 (+400%)</span><span>5000 Données</span></div><small>180s</small>
+                    </button>
+
+                    <div id="oc-timer" style="text-align:center; margin-top:10px; font-weight:bold; color:var(--cyan); display:none;">
+                        Boost: <span id="oc-percent">0</span>% | <span id="oc-countdown">0</span>s
+                    </div>
+                </div>
+
+                <div class="stat-box" style="border-color: var(--green);">
+                    <h3>Événements Aléatoires</h3>
+                    <p class="sub-text" id="event-desc">En attente d'un événement...</p>
+                    <div id="event-timer" style="text-align:center; font-weight:bold; color:var(--green); display:none;">
+                        Durée: <span id="event-countdown">0</span>s
+                    </div>
+                </div>
+
+                <div class="stat-box" style="border-color: var(--gold);">
+                    <h3>Quêtes</h3>
+                    <div id="quest-container"></div>
+                </div>
+
+                <div class="stat-box" style="border-color: var(--purple);">
+                    <h3>Prestige (Reborn)</h3>
+                    <p class="sub-text">Réinitialisez tout pour un bonus permanent.</p>
+                    <p>Bonus actuel: <span id="prestige-bonus">0%</span></p>
+                    <button class="btn btn-reset" onclick="doPrestige()">
+                        REBORN (Nécessite 10k prod/sec)
+                    </button>
+                </div>
+
+                <div class="log-area" id="game-log"></div>
+            </div>
+
+            <!-- Colonne Droite : Stats -->
+            <div>
+                <div class="stat-box">
+                    <h3>Statistiques</h3>
+                    <div class="res-row"><span>Machines:</span> <span id="machine-count">0</span></div>
+                    <div class="res-row"><span>Branches:</span> <span id="branch-info">-</span></div>
+                    <div class="res-row"><span>Données Totales:</span> <span id="total-data">0</span></div>
+                    <!-- NOUVELLES LIGNES -->
+                    <div class="res-row" style="border-top: 1px solid #334155; margin-top: 5px; padding-top: 5px;">
+                        <span style="color: var(--gold);">Prod. Pièces (Réel):</span> 
+                        <span id="real-bps">0</span>
+                    </div>
+                    <div class="res-row">
+                        <span style="color: var(--cyan);">Prod. Données (Réel):</span> 
+                        <span id="real-dps">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="oc-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <h3 id="oc-title" style="color:var(--cyan)">OVERCLOCK ACTIVÉ!</h3>
+        <p id="oc-desc" style="font-size:1.2em; margin:20px 0;"></p>
+        <button class="btn btn-buy" onclick="closeOcModal()">Fermer</button>
+    </div>
+</div>
+
+<script>
+    /* 
+    =====================================================
+    CONFIGURATION
+    =====================================================
+    */
+    const CONFIG = {
+        game: {
+            startRes: 0,
+            clickBase: 1,
+            prestigeReq: 10000,
+            prestigeMult: 0.10,
+            eventCheckInterval: 10, // Vérifier un événement toutes les 10s
+            eventMinTime: 30, // Min secondes entre événements
+            eventMaxTime: 120 // Max secondes entre événements
+        },
+        branches: {
+            logic: { name: "Logique", color: "#3b82f6", mult: 2.5, risk: 0.15 },
+            magic: { name: "Magie", color: "#a855f7", mult: 0.5, passive: 3.0 },
+            social: { name: "Social", color: "#22c55e", mult: 1.2, dataBoost: 2.0 }
+        },
+        overclockTiers: [
+            { id: 1, name: "Niveau 1", bonus: 0.30, duration: 60, cost: 50, unlockData: 0 },   // 0.30 = +30%
+            { id: 2, name: "Niveau 2", bonus: 0.50, duration: 90, cost: 200, unlockData: 500 }, // 0.50 = +50%
+            { id: 3, name: "Niveau 3", bonus: 1.00, duration: 120, cost: 1000, unlockData: 2000 }, // 1.00 = +100%
+            { id: 4, name: "Niveau 4", bonus: 1.50, duration: 180, cost: 5000, unlockData: 10000 } // 1.50 = +150%
+        ],
+        machines: [
+            { id: 'hand', name: "Main d'œuvre", baseCost: 15, baseProd: 0.5, dataProd: 0, desc: "Ouvrier basique." },
+            { id: 'drill', name: "Foreuse Auto", baseCost: 100, baseProd: 3, dataProd: 0, desc: "Produit des pièces." },
+            { id: 'arm', name: "Bras Robotique", baseCost: 1100, baseProd: 12, dataProd: 0, desc: "Assemble des modules." },
+            { id: 'server', name: "Serveur de Données", baseCost: 12000, baseProd: 45, dataProd: 0.5, desc: "Commence à générer des Données." },
+            { id: 'ai', name: "IA Centrale", baseCost: 130000, baseProd: 150, dataProd: 2.0, desc: "Gère la production et les Données." },
+            { id: 'quantum', name: "Réacteur Quantique", baseCost: 1300000, baseProd: 600, dataProd: 10.0, desc: "Production massive de Données." }
+        ],
+        quests: [
+            { id: 'q1', name: "Premiers pas", desc: "Achat de 5 Main d'œuvre", condition: "machines.hand >= 5", reward: 50, claimed: false },
+            { id: 'q2', name: "Automatisation", desc: "Achat de 10 Foreuses", condition: "machines.drill >= 10", reward: 100, claimed: false },
+            { id: 'q3', name: "Data Center", desc: "Achat de 5 Serveurs", condition: "machines.server >= 5", reward: 250, claimed: false },
+            { id: 'q4', name: "Intelligence", desc: "Achat de 2 IA Centrales", condition: "machines.ai >= 2", reward: 500, claimed: false },
+            { id: 'q5', name: "Quantique", desc: "Achat de 1 Réacteur", condition: "machines.quantum >= 1", reward: 1000, claimed: false }
+        ],
+        events: [
+            { id: 'storm', name: "Tempête de Données", desc: "Production de Données x2 pendant 30s", multiplier: 2.0, duration: 30, type: 'data' },
+            { id: 'boom', name: "Boom Économique", desc: "Production de Pièces x2 pendant 30s", multiplier: 2.0, duration: 30, type: 'pieces' },
+            { id: 'glitch', name: "Glitch Système", desc: "Production x0.5 pendant 15s (Pénalité)", multiplier: 0.5, duration: 15, type: 'all' }
+        ]
+    };
+
+    /* 
+    =====================================================
+    LOGIQUE DU JEU
+    =====================================================
+    */
+    let state = {
+        pieces: 0,
+        donnees: 0,
+        totalDataEarned: 0,
+        branch: null,
+        machines: {}, 
+        prestigeCount: 0,
+        overclockActive: false,
+        overclockTier: 0,
+        overclockTimer: 0,
+        eventActive: false,
+        eventTimer: 0,
+        eventConfig: null,
+        nextEventTime: 0,
+        quests: [], // Copie des quêtes avec état 'claimed'
+        startTime: Date.now()
+    };
+
+    CONFIG.machines.forEach(m => { if(!state.machines[m.id]) state.machines[m.id] = 0; });
+    // Initialiser les quêtes si vide (nouvelle partie)
+    if (state.quests.length === 0) {
+        state.quests = JSON.parse(JSON.stringify(CONFIG.quests));
+    }
+
+    let timer = null;
+    let ocTimer = null;
+    let eventTimer = null;
+
+    function init() {
+        loadGame();
+        renderShop();
+        renderQuests();
+        updateUI();
+        
+        if (!state.branch) {
+            document.getElementById('start-screen').classList.remove('hidden');
+            document.getElementById('game-screen').classList.add('hidden');
+        } else {
+            startGame();
+        }
+    }
+
+    function startGame() {
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        updateBranchBadge();
+        
+        // Calculer le prochain événement
+        if (!state.nextEventTime || state.nextEventTime < Date.now()) {
+            scheduleNextEvent();
+        }
+
+        timer = setInterval(gameLoop, 1000);
+        setInterval(updateUI, 100);
+        
+        if (state.overclockActive) {
+            startOcTimer(state.overclockTimer);
+        }
+        if (state.eventActive) {
+            startEventTimer(state.eventTimer);
+        }
+    }
+
+    function scheduleNextEvent() {
+        const delay = Math.floor(Math.random() * (CONFIG.game.eventMaxTime - CONFIG.game.eventMinTime) + CONFIG.game.eventMinTime) * 1000;
+        state.nextEventTime = Date.now() + delay;
+        log(`Prochain événement dans ${Math.round(delay/1000)}s...`);
+    }
+
+    function triggerRandomEvent() {
+        if (state.eventActive) return;
+
+        const event = CONFIG.events[Math.floor(Math.random() * CONFIG.events.length)];
+        state.eventActive = true;
+        state.eventConfig = event;
+        state.eventTimer = event.duration;
+        
+        startEventTimer(event.duration);
+        log(`🌟 ÉVÉNEMENT : ${event.name} ! ${event.desc}`);
+        updateUI();
+    }
+
+    function selectBranch(type) {
+        state.branch = type;
+        saveGame();
+        startGame();
+        log(`Branche activée : ${CONFIG.branches[type].name}`);
+    }
+
+    function gameLoop() {
+        if (!state.branch) return;
+
+        // Vérification événement
+        if (!state.eventActive && Date.now() >= state.nextEventTime) {
+            triggerRandomEvent();
+            scheduleNextEvent();
+        }
+
+        let branchCfg = CONFIG.branches[state.branch];
+        
+        // Calcul Production Pièces
+        let rawPieces = calculateProduction('pieces');
+        let finalPieces = rawPieces * branchCfg.mult;
+        if (state.branch === 'magic') finalPieces *= branchCfg.passive;
+        finalPieces *= (1 + (state.prestigeCount * CONFIG.game.prestigeMult));
+        
+        if (state.overclockActive) {
+            const tier = CONFIG.overclockTiers.find(t => t.id === state.overclockTier);
+            if (tier) finalPieces *= (1 + tier.bonus);
+        }
+        if (state.eventActive && state.eventConfig.type !== 'data') {
+            finalPieces *= state.eventConfig.multiplier;
+        }
+
+        if (state.branch === 'logic' && Math.random() < branchCfg.risk) {
+            log("⚠️ PANNE ! Production arrêtée.");
+            finalPieces = 0;
+        }
+
+        state.pieces += finalPieces;
+
+        // Calcul Production Données
+        let rawData = calculateProduction('data');
+        let finalData = rawData * branchCfg.mult;
+        if (state.branch === 'magic') finalData *= branchCfg.passive;
+        finalData *= (1 + (state.prestigeCount * CONFIG.game.prestigeMult));
+        
+        if (state.overclockActive) {
+            const tier = CONFIG.overclockTiers.find(t => t.id === state.overclockTier);
+            if (tier) finalData *= (1 + tier.bonus);
+        }
+        if (state.eventActive && state.eventConfig.type !== 'pieces') {
+            finalData *= state.eventConfig.multiplier;
+        }
+        
+        if (state.branch === 'social') finalData *= branchCfg.dataBoost;
+
+        state.donnees += finalData;
+        state.totalDataEarned += finalData;
+
+        // Gestion Timer Overclock
+        if (state.overclockActive) {
+            state.overclockTimer--;
+            if (state.overclockTimer <= 0) {
+                deactivateOverclock();
+            }
+        }
+
+        // Gestion Timer Event
+        if (state.eventActive) {
+            state.eventTimer--;
+            if (state.eventTimer <= 0) {
+                deactivateEvent();
+            }
+        }
+
+        // Vérification Quêtes
+        checkQuests();
+
+        saveGame();
+        updateUI();
+    }
+
+    function calculateProduction(type) {
+        let total = 0;
+        CONFIG.machines.forEach(m => {
+            let amount = state.machines[m.id] || 0;
+            if (type === 'pieces') total += amount * m.baseProd;
+            if (type === 'data') total += amount * m.dataProd;
+        });
+        return total;
+    }
+
+    function manualClick() {
+        let power = CONFIG.game.clickBase * (1 + (state.prestigeCount * CONFIG.game.prestigeMult));
+        if (state.overclockActive) {
+            const tier = CONFIG.overclockTiers.find(t => t.id === state.overclockTier);
+            if (tier) power *= (1 + tier.bonus);
+        }
+        if (state.eventActive && state.eventConfig.type !== 'data') {
+            power *= state.eventConfig.multiplier;
+        }
+        state.pieces += power;
+        updateUI();
+    }
+
+    // --- SHOP SYSTEM ---
+    function getCost(machineId) {
+        const m = CONFIG.machines.find(x => x.id === machineId);
+        const count = state.machines[machineId];
+        return Math.floor(m.baseCost * Math.pow(1.15, count));
+    }
+
+    function buyMachine(id) {
+        const cost = getCost(id);
+        if (state.pieces >= cost) {
+            state.pieces -= cost;
+            state.machines[id]++;
+            renderShop();
+            updateUI();
+            saveGame();
+            log(`Acheté : ${CONFIG.machines.find(x=>x.id===id).name}`);
+        }
+    }
+
+    function renderShop() {
+        const container = document.getElementById('shop-container');
+        container.innerHTML = '';
+        
+        CONFIG.machines.forEach(m => {
+            const count = state.machines[m.id];
+            const cost = getCost(m.id);
+            const canBuy = state.pieces >= cost;
+            
+            let dataInfo = "";
+            if (m.dataProd > 0) {
+                dataInfo = `<br><span style="color:var(--cyan)">+${m.dataProd} Données/s</span>`;
+            }
+
+            const div = document.createElement('div');
+            div.className = 'shop-item';
+            div.innerHTML = `
+                <div class="shop-header">
+                    <span>${m.name} <span class="count-badge">${count}</span></span>
+                    <span style="color:${canBuy?'var(--gold)':'#64748b'}">${cost} pts</span>
+                </div>
+                <div class="shop-desc">${m.desc} (+${m.baseProd} pts/s)${dataInfo}</div>
+                <button class="btn btn-buy" style="${canBuy?'':'opacity:0.5'}" onclick="buyMachine('${m.id}')">
+                    ACHETER
+                </button>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    // --- QUEST SYSTEM ---
+    function renderQuests() {
+        const container = document.getElementById('quest-container');
+        container.innerHTML = '';
+        
+        state.quests.forEach(q => {
+            const isDone = evaluateCondition(q.condition);
+            const isClaimed = q.claimed;
+            
+            const div = document.createElement('div');
+            div.className = `quest-item ${isClaimed ? 'quest-done' : ''}`;
+            div.innerHTML = `
+                <div>
+                    <div style="font-weight:bold; font-size:0.9em;">${q.name}</div>
+                    <div style="font-size:0.8em; color:#94a3b8;">${q.desc}</div>
+                </div>
+                <div>
+                    <span class="quest-reward">+${q.reward} Données</span>
+                    <button class="btn btn-claim" ${(!isDone || isClaimed) ? 'disabled' : ''} onclick="claimQuest('${q.id}')">
+                        ${isClaimed ? 'FAIT' : 'REÇOIVRE'}
+                    </button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function evaluateCondition(conditionStr) {
+        // Évaluation simple de condition (ex: "machines.hand >= 5")
+        try {
+            // Remplacer 'machines.' par 'state.machines.'
+            const evalStr = conditionStr.replace(/machines\./g, 'state.machines.');
+            return eval(evalStr);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function checkQuests() {
+        let changed = false;
+        state.quests.forEach(q => {
+            if (!q.claimed && evaluateCondition(q.condition)) {
+                // Quête accomplie, mais pas encore réclamée (on attend le clic)
+                changed = true;
+            }
+        });
+        if (changed) renderQuests();
+    }
+
+    function claimQuest(questId) {
+        const q = state.quests.find(x => x.id === questId);
+        if (!q || q.claimed) return;
+        
+        if (evaluateCondition(q.condition)) {
+            state.donnees += q.reward;
+            q.claimed = true;
+            log(`Quête "${q.name}" complétée ! +${q.reward} Données.`);
+            renderQuests();
+            updateUI();
+            saveGame();
+        }
+    }
+
+    // --- OVERCLOCK TIERS SYSTEM ---
+    function activateOverclock(tierId) {
+        if (state.overclockActive) {
+            log("Déjà actif !");
+            return;
+        }
+
+        const tier = CONFIG.overclockTiers.find(t => t.id === tierId);
+        if (!tier) return;
+
+        if (state.donnees < tier.cost) {
+            log(`Pas assez de Données pour le Niveau ${tierId} !`);
+            return;
+        }
+
+        state.donnees -= tier.cost;
+        state.overclockActive = true;
+        state.overclockTier = tierId;
+        state.overclockTimer = tier.duration;
+        
+        startOcTimer(tier.duration);
+        showOcModal(tier);
+        updateUI();
+        saveGame();
+        log(`OVERCLOCK Niveau ${tierId} ACTIVÉ ! +${tier.bonus*100}% pendant ${tier.duration}s.`);
+    }
+
+    function startOcTimer(duration) {
+        document.getElementById('oc-timer').style.display = 'block';
+        document.getElementById('oc-countdown').innerText = duration;
+        
+        if (ocTimer) clearInterval(ocTimer);
+        ocTimer = setInterval(() => {
+            state.overclockTimer--;
+            document.getElementById('oc-countdown').innerText = state.overclockTimer;
+            if (state.overclockTimer <= 0) {
+                deactivateOverclock();
+            }
+        }, 1000);
+    }
+
+    function deactivateOverclock() {
+        state.overclockActive = false;
+        state.overclockTier = 0;
+        state.overclockTimer = 0;
+        clearInterval(ocTimer);
+        document.getElementById('oc-timer').style.display = 'none';
+        document.getElementById('oc-status').innerText = "NON";
+        document.getElementById('oc-status').classList.remove('overclock-active');
+        log("Overclock terminé.");
+        updateUI();
+    }
+
+    function showOcModal(tier) {
+        document.getElementById('oc-modal').classList.remove('hidden');
+        document.getElementById('oc-modal').style.display = 'flex';
+        document.getElementById('oc-title').innerText = `OVERCLOCK NIVEAU ${tier.id} !`;
+        document.getElementById('oc-desc').innerHTML = `Bonus: +${tier.bonus*100}%<br>Duration: ${tier.duration}s`;
+        document.getElementById('oc-status').innerText = `NIVEAU ${tier.id}`;
+        document.getElementById('oc-status').classList.add('overclock-active');
+    }
+
+    function closeOcModal() {
+        document.getElementById('oc-modal').classList.add('hidden');
+        document.getElementById('oc-modal').style.display = 'none';
+    }
+
+    // --- EVENT SYSTEM ---
+    function startEventTimer(duration) {
+        document.getElementById('event-timer').style.display = 'block';
+        document.getElementById('event-countdown').innerText = duration;
+        document.getElementById('event-desc').innerText = state.eventConfig.desc;
+        
+        if (eventTimer) clearInterval(eventTimer);
+        eventTimer = setInterval(() => {
+            state.eventTimer--;
+            document.getElementById('event-countdown').innerText = state.eventTimer;
+            if (state.eventTimer <= 0) {
+                deactivateEvent();
+            }
+        }, 1000);
+    }
+
+    function deactivateEvent() {
+        state.eventActive = false;
+        state.eventTimer = 0;
+        state.eventConfig = null;
+        clearInterval(eventTimer);
+        document.getElementById('event-timer').style.display = 'none';
+        document.getElementById('event-desc').innerText = "En attente d'un événement...";
+        document.getElementById('event-display').innerText = "AUCUN";
+        document.getElementById('event-display').classList.remove('event-active');
+        log("L'événement est terminé.");
+        updateUI();
+    }
+
+    // --- PRESTIGE SYSTEM ---
+    function doPrestige() {
+        // CALCUL SANS OVERCLOCK (Production de base)
+        let prodP = calculateProduction('pieces');
+        if (state.branch) {
+            prodP *= CONFIG.branches[state.branch].mult;
+            if (state.branch === 'magic') prodP *= CONFIG.branches.magic.passive;
+        }
+        prodP *= (1 + (state.prestigeCount * CONFIG.game.prestigeMult));
+        
+        // On NE multiplie PAS par le bonus Overclock ici
+        
+        if (prodP < CONFIG.game.prestigeReq) {
+            log(`Besoin de ${CONFIG.game.prestigeReq}/s (sans boost) pour le Reborn! (Actuel: ${prodP.toFixed(1)})`);
+            return;
+        }
+
+        if (!confirm("REBORN CONFIRMÉ ?\n- Vous perdez tout (Pièces, Données, Machines, Quêtes).\n- Vous gardez le bonus de prestige.\n- Vous pouvez choisir une NOUVELLE branche.")) return;
+
+        state.pieces = 0;
+        state.donnees = 0;
+        state.totalDataEarned = 0;
+        CONFIG.machines.forEach(m => state.machines[m.id] = 0);
+        state.quests = JSON.parse(JSON.stringify(CONFIG.quests));
+        state.overclockActive = false;
+        state.overclockTier = 0;
+        state.overclockTimer = 0;
+        state.eventActive = false;
+        state.eventTimer = 0;
+        state.eventConfig = null;
+        state.prestigeCount++;
+        state.branch = null;
+
+        saveGame();
+        clearInterval(timer);
+        if (ocTimer) clearInterval(ocTimer);
+        if (eventTimer) clearInterval(eventTimer);
+        
+        document.getElementById('start-screen').classList.remove('hidden');
+        document.getElementById('game-screen').classList.add('hidden');
+        updateUI();
+        renderShop();
+        renderQuests();
+        log("REBOND EFFECTUÉ ! Nouveau départ.");
+    }
+
+    // --- UI & UTILS ---
+    function updateUI() {
+        // --- AFFICHAGE DES RESSOURCES ---
+        document.getElementById('res-display').innerText = Math.floor(state.pieces).toLocaleString();
+        document.getElementById('data-display').innerText = Math.floor(state.donnees).toLocaleString();
+        
+        // --- CALCUL 1 : PRODUCTION DE BASE (SANS BOOSTS TEMPORAIRES) ---
+        // Utilisé pour le Header et le seuil de Reborn
+        let baseProdP = calculateProduction('pieces');
+        if (state.branch) {
+            baseProdP *= CONFIG.branches[state.branch].mult;
+            if (state.branch === 'magic') baseProdP *= CONFIG.branches.magic.passive;
+        }
+        baseProdP *= (1 + state.prestigeCount * CONFIG.game.prestigeMult);
+        // Note: On NE multiplie PAS par Overclock ou Event ici
+
+        let baseProdD = calculateProduction('data');
+        if (state.branch) {
+            baseProdD *= CONFIG.branches[state.branch].mult;
+            if (state.branch === 'magic') baseProdD *= CONFIG.branches.magic.passive;
+        }
+        baseProdD *= (1 + state.prestigeCount * CONFIG.game.prestigeMult);
+        if (state.branch === 'social') baseProdD *= CONFIG.branches.social.dataBoost;
+        // Note: On NE multiplie PAS par Overclock ou Event ici
+
+        // --- CALCUL 2 : PRODUCTION RÉELLE (AVEC TOUS LES BOOSTS) ---
+        // Utilisé pour les Statistiques
+        let realProdP = baseProdP;
+        let realProdD = baseProdD;
+
+        if (state.overclockActive) {
+            const tier = CONFIG.overclockTiers.find(t => t.id === state.overclockTier);
+            if (tier) {
+                realProdP *= (1 + tier.bonus);
+                realProdD *= (1 + tier.bonus);
+            }
+        }
+        if (state.eventActive) {
+            if (state.eventConfig.type !== 'data') realProdP *= state.eventConfig.multiplier;
+            if (state.eventConfig.type !== 'pieces') realProdD *= state.eventConfig.multiplier;
+        }
+
+        // --- AFFICHAGE HEADER (Production de BASE uniquement) ---
+        document.getElementById('bps-display').innerText = baseProdP.toFixed(1);
+        document.getElementById('dps-display').innerText = baseProdD.toFixed(2);
+        
+        document.getElementById('prestige-display').innerText = "x" + (1 + state.prestigeCount * CONFIG.game.prestigeMult).toFixed(2);
+        document.getElementById('prestige-bonus').innerText = "+" + Math.round(state.prestigeCount * CONFIG.game.prestigeMult * 100) + "%";
+        document.getElementById('total-data').innerText = Math.floor(state.totalDataEarned).toLocaleString();
+
+        // Click Power (Doit bénéficier du boost réel)
+        let clickPower = CONFIG.game.clickBase * (1 + state.prestigeCount * CONFIG.game.prestigeMult);
+        if (state.overclockActive) {
+            const tier = CONFIG.overclockTiers.find(t => t.id === state.overclockTier);
+            if (tier) clickPower *= (1 + tier.bonus);
+        }
+        if (state.eventActive && state.eventConfig.type !== 'data') {
+            clickPower *= state.eventConfig.multiplier;
+        }
+        document.getElementById('click-val').innerText = clickPower.toFixed(1);
+
+        // --- MISE À JOUR DU HEADER (Boost & Event) ---
+        const ocDisplay = document.getElementById('oc-display');
+        if (state.overclockActive) {
+            const tier = CONFIG.overclockTiers.find(t => t.id === state.overclockTier);
+            if (tier) {
+                ocDisplay.innerText = `NIVEAU ${tier.id} (+${tier.bonus*100}%)`;
+                ocDisplay.classList.add('overclock-active');
+                ocDisplay.style.color = 'var(--cyan)';
+            }
+        } else {
+            ocDisplay.innerText = "AUCUN";
+            ocDisplay.classList.remove('overclock-active');
+            ocDisplay.style.color = 'var(--text)';
+        }
+
+        const eventDisplay = document.getElementById('event-display');
+        if (state.eventActive) {
+            eventDisplay.innerText = state.eventConfig.name;
+            eventDisplay.classList.add('event-active');
+            eventDisplay.style.color = state.eventConfig.multiplier > 1 ? 'var(--green)' : 'var(--red)';
+        } else {
+            eventDisplay.innerText = "AUCUN";
+            eventDisplay.classList.remove('event-active');
+            eventDisplay.style.color = 'var(--text)';
+        }
+
+        // --- MISE À JOUR OVERCLOCK (Boutons) ---
+        CONFIG.overclockTiers.forEach(tier => {
+            const btn = document.getElementById(`btn-oc-${tier.id}`);
+            if (!btn) return;
+
+            const isUnlocked = state.totalDataEarned >= tier.unlockData;
+            
+            if (!isUnlocked) {
+                btn.disabled = true;
+                btn.style.opacity = '0.3';
+                btn.innerHTML = `<div style="display:flex; justify-content:space-between;"><span>${tier.name} (Verrouillé)</span><span>${tier.cost} Données</span></div><small>Besoin: ${tier.unlockData} Données cumulées</small>`;
+            } else if (state.overclockActive) {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.innerHTML = `<div style="display:flex; justify-content:space-between;"><span>${tier.name} (En cours)</span><span>...</span></div><small>Attendez la fin</small>`;
+            } else if (state.donnees < tier.cost) {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.innerHTML = `<div style="display:flex; justify-content:space-between;"><span>${tier.name}</span><span>MANQUE (${tier.cost - state.donnees})</span></div><small>${tier.duration}s</small>`;
+            } else {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.innerHTML = `<div style="display:flex; justify-content:space-between;"><span>${tier.name} (+${tier.bonus*100}%)</span><span>${tier.cost} Données</span></div><small>${tier.duration}s</small>`;
+            }
+        });
+
+        // --- MISE À JOUR SHOP ---
+        CONFIG.machines.forEach(m => {
+            const btn = document.querySelector(`button[onclick="buyMachine('${m.id}')"]`);
+            if (btn) {
+                const cost = getCost(m.id);
+                if (state.pieces >= cost) {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                } else {
+                    btn.disabled = true;
+                    btn.style.opacity = '0.5';
+                }
+            }
+        });
+
+        // --- MISE À JOUR EVENT (Timer) ---
+        if (state.eventActive) {
+            document.getElementById('event-timer').style.display = 'block';
+            document.getElementById('event-countdown').innerText = state.eventTimer;
+            document.getElementById('event-desc').innerText = state.eventConfig.desc;
+        } else {
+            document.getElementById('event-timer').style.display = 'none';
+            document.getElementById('event-desc').innerText = "En attente d'un événement...";
+        }
+
+        // --- MISE À JOUR PRESTIGE (Bouton Reborn) ---
+        const btnPrestige = document.querySelector('.btn-reset');
+        
+        // Condition : Assez de prod de base ET pas d'Overclock/Event actif
+        if (baseProdP >= CONFIG.game.prestigeReq && !state.overclockActive && !state.eventActive) {
+            btnPrestige.disabled = false;
+            btnPrestige.style.opacity = 1;
+            btnPrestige.title = "Reborn disponible";
+        } else {
+            btnPrestige.disabled = true;
+            btnPrestige.style.opacity = 0.5;
+            if (state.overclockActive) {
+                btnPrestige.title = "Attendez la fin de l'Overclock";
+            } else if (state.eventActive) {
+                btnPrestige.title = "Attendez la fin de l'Événement";
+            } else {
+                btnPrestige.title = `Besoin de ${CONFIG.game.prestigeReq}/s (Base: ${baseProdP.toFixed(1)})`;
+            }
+        }
+
+        // --- STATS ---
+        let totalMachines = Object.values(state.machines).reduce((a,b)=>a+b, 0);
+        document.getElementById('machine-count').innerText = totalMachines;
+        document.getElementById('branch-info').innerText = state.branch ? CONFIG.branches[state.branch].name : "-";
+        
+        // Affichage des productions réelles (avec tous les boosts) dans les Statistiques
+        document.getElementById('real-bps').innerText = realProdP.toFixed(1) + "/s";
+        document.getElementById('real-dps').innerText = realProdD.toFixed(2) + "/s";
+        
+        if (state.overclockActive) {
+            const tier = CONFIG.overclockTiers.find(t => t.id === state.overclockTier);
+            document.getElementById('oc-percent').innerText = "+" + Math.round(tier.bonus * 100);
+        } else {
+            document.getElementById('oc-percent').innerText = "0";
+        }
+    }
+
+    function updateBranchBadge() {
+        const badge = document.getElementById('branch-badge');
+        if (state.branch) {
+            badge.innerText = CONFIG.branches[state.branch].name;
+            badge.style.background = CONFIG.branches[state.branch].color;
+            badge.style.color = '#fff';
+        }
+    }
+
+    function log(msg) {
+        const area = document.getElementById('game-log');
+        area.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}<br>` + area.innerHTML;
+    }
+
+    function saveGame() {
+        localStorage.setItem('autoFactoryV5', JSON.stringify(state));
+    }
+
+    function loadGame() {
+        const s = localStorage.getItem('autoFactoryV5');
+        if (s) {
+            try {
+                const loaded = JSON.parse(s);
+                state = { ...state, ...loaded };
+                CONFIG.machines.forEach(m => { if(typeof state.machines[m.id] === 'undefined') state.machines[m.id] = 0; });
+                // Recharger les quêtes si elles existent déjà, sinon initialiser
+                if (state.quests.length === 0) {
+                    state.quests = JSON.parse(JSON.stringify(CONFIG.quests));
+                }
+            } catch(e) { console.error("Erreur de chargement", e); }
+        }
+    }
+
+    // Démarrage
+    init();
+</script>
+</body>
+</html>

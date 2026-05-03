@@ -1,0 +1,62 @@
+:root {
+    --bg: #0f172a; --card: #1e293b; --text: #e2e8f0;
+    --blue: #3b82f6; --purple: #a855f7; --green: #22c55e;
+    --gold: #fbbf24; --red: #ef4444; --cyan: #06b6d4; --orange: #f97316; --pink: #ec4899;
+}
+body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; justify-content: center; }
+.container { width: 100%; max-width: 1000px; background: var(--card); border-radius: 12px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+
+.grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+h1, h2, h3 { margin-top: 0; color: var(--gold); }
+.stat-box { background: #0f172a; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--blue); }
+.res-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.big-text { font-size: 1.8em; font-weight: bold; color: var(--gold); }
+.sub-text { font-size: 0.9em; color: #94a3b8; }
+.data-text { color: var(--cyan); font-weight: bold; }
+
+.btn { padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 8px; transition: 0.2s; }
+.btn:active { transform: scale(0.98); }
+.btn-buy { background: var(--blue); color: white; display: flex; justify-content: space-between; align-items: center; }
+.btn-buy:disabled { background: #475569; cursor: not-allowed; opacity: 0.6; }
+
+/* Styles Overclock Tiers */
+.tier-btn { margin-bottom: 10px; border: 1px solid transparent; }
+.tier-1 { background: linear-gradient(45deg, var(--cyan), #0ea5e9); color: white; }
+.tier-2 { background: linear-gradient(45deg, var(--orange), #f97316); color: white; }
+.tier-3 { background: linear-gradient(45deg, var(--purple), #a855f7); color: white; }
+.tier-4 { background: linear-gradient(45deg, var(--pink), #db2777); color: white; }
+
+.tier-btn:disabled { background: #334155; border-color: #475569; cursor: not-allowed; opacity: 0.5; filter: grayscale(1); }
+
+.btn-reset { background: var(--red); color: white; margin-top: 20px; }
+
+.shop-item { background: #0f172a; padding: 10px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #334155; }
+.shop-header { display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: bold; }
+.shop-desc { font-size: 0.85em; color: #94a3b8; }
+.count-badge { background: var(--purple); padding: 2px 8px; border-radius: 10px; font-size: 0.8em; }
+
+.branch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+.branch-card { background: #334155; padding: 15px; border-radius: 8px; text-align: center; cursor: pointer; border: 2px solid transparent; }
+.branch-card:hover { background: #475569; }
+.branch-card.selected { border-color: white; background: #475569; }
+.logic { color: var(--blue); } .magic { color: var(--purple); } .social { color: var(--green); }
+
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 100; }
+.modal-content { background: var(--card); padding: 30px; border-radius: 12px; text-align: center; max-width: 400px; border: 2px solid var(--cyan); animation: popIn 0.3s ease; }
+@keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.hidden { display: none !important; }
+.log-area { height: 120px; overflow-y: auto; background: #0f172a; padding: 10px; font-family: monospace; font-size: 0.85em; border-radius: 4px; margin-top: 10px; color: #cbd5e1; border: 1px solid #334155; }
+
+.overclock-active { color: var(--cyan); font-weight: bold; animation: pulse 1s infinite; }
+.event-active { color: var(--green); font-weight: bold; animation: pulse 1s infinite; }
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+/* Quest Styles */
+.quest-item { background: #1e293b; padding: 8px; margin-bottom: 5px; border-radius: 4px; border-left: 3px solid var(--gold); display: flex; justify-content: space-between; align-items: center; }
+.quest-done { border-left-color: var(--green); opacity: 0.6; text-decoration: line-through; }
+.quest-reward { color: var(--gold); font-weight: bold; }
+.btn-claim { background: var(--gold); color: black; padding: 4px 8px; font-size: 0.8em; width: auto; margin: 0; }
+.btn-claim:disabled { background: #475569; color: #94a3b8; cursor: not-allowed; }
