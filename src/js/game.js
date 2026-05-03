@@ -1,36 +1,45 @@
-// Logique de jeu : calculs, boucles
-
 import { CONFIG } from './config.js';
 
-// État global du jeu
 export let state = {
-    pieces: 0,
-    donnees: 0,
-    totalDataEarned: 0,
-    branch: null,
-    machines: {}, 
-    prestigeCount: 0,
-    overclockActive: false,
-    overclockTier: 0,
-    overclockTimer: 0,
-    eventActive: false,
-    eventTimer: 0,
-    eventConfig: null,
-    nextEventTime: 0,
-    quests: [],
-    startTime: Date.now()
+    pieces: 0, donnees: 0, totalDataEarned: 0, branch: null, machines: {}, prestigeCount: 0,
+    overclockActive: false, overclockTier: 0, overclockTimer: 0,
+    eventActive: false, eventTimer: 0, eventConfig: null, nextEventTime: 0, quests: [], startTime: Date.now()
 };
 
-// Initialisation des machines
 CONFIG.machines.forEach(m => { if(!state.machines[m.id]) state.machines[m.id] = 0; });
-if (state.quests.length === 0) {
-    state.quests = JSON.parse(JSON.stringify(CONFIG.quests));
+if (state.quests.length === 0) state.quests = JSON.parse(JSON.stringify(CONFIG.quests));
+
+// Timers locaux
+let gameLoopId = null;
+let ocLoopId = null;
+let eventLoopId = null;
+
+export function startTimers() {
+    if (gameLoopId) clearInterval(gameLoopId);
+    gameLoopId = setInterval(gameLoop, 1000);
+    
+    if (state.overclockActive) {
+        if (ocLoopId) clearInterval(ocLoopId);
+        ocLoopId = setInterval(() => {
+            state.overclockTimer--;
+            if (state.overclockTimer <= 0) deactivateOverclock();
+        }, 1000);
+    }
+    
+    if (state.eventActive) {
+        if (eventLoopId) clearInterval(eventLoopId);
+        eventLoopId = setInterval(() => {
+            state.eventTimer--;
+            if (state.eventTimer <= 0) deactivateEvent();
+        }, 1000);
+    }
 }
 
-// Boucles
-export let timer = null;
-export let ocTimer = null;
-export let eventTimer = null;
+export function stopTimers() {
+    if (gameLoopId) clearInterval(gameLoopId);
+    if (ocLoopId) clearInterval(ocLoopId);
+    if (eventLoopId) clearInterval(eventLoopId);
+}
 
 export function calculateProduction(type) {
     let total = 0;
@@ -64,9 +73,7 @@ export function manualClick() {
         const tier = CONFIG.overclockTiers.find(t => t.id === state.overclockTier);
         if (tier) power *= (1 + tier.bonus);
     }
-    if (state.eventActive && state.eventConfig.type !== 'data') {
-        power *= state.eventConfig.multiplier;
-    }
+    if (state.eventActive && state.eventConfig.type !== 'data') power *= state.eventConfig.multiplier;
     state.pieces += power;
 }
 
@@ -74,7 +81,6 @@ export function activateOverclock(tierId) {
     if (state.overclockActive) return false;
     const tier = CONFIG.overclockTiers.find(t => t.id === tierId);
     if (!tier || state.donnees < tier.cost) return false;
-
     state.donnees -= tier.cost;
     state.overclockActive = true;
     state.overclockTier = tierId;
@@ -85,7 +91,6 @@ export function activateOverclock(tierId) {
 export function claimQuest(questId) {
     const q = state.quests.find(x => x.id === questId);
     if (!q || q.claimed) return false;
-    
     try {
         const evalStr = q.condition.replace(/machines\./g, 'state.machines.');
         if (eval(evalStr)) {
@@ -104,7 +109,6 @@ export function doPrestige() {
         if (state.branch === 'magic') prodP *= CONFIG.branches.magic.passive;
     }
     prodP *= (1 + (state.prestigeCount * CONFIG.game.prestigeMult));
-
     if (prodP < CONFIG.game.prestigeReq) return false;
 
     if (ocTimer) {
@@ -121,24 +125,15 @@ export function doPrestige() {
     state.totalDataEarned = 0;
     CONFIG.machines.forEach(m => state.machines[m.id] = 0);
     state.quests = JSON.parse(JSON.stringify(CONFIG.quests));
-    state.overclockActive = false;
-    state.overclockTier = 0;
-    state.overclockTimer = 0;
-    state.eventActive = false;
-    state.eventTimer = 0;
-    state.eventConfig = null;
-    state.prestigeCount++;
-    state.branch = null;
+    state.overclockActive = false; state.overclockTier = 0; state.overclockTimer = 0;
+    state.eventActive = false; state.eventTimer = 0; state.eventConfig = null;
+    state.prestigeCount++; state.branch = null;
     return true;
 }
 
-export function selectBranch(type) {
-    state.branch = type;
-}
+export function selectBranch(type) { state.branch = type; }
 
-export function saveGame() {
-    localStorage.setItem('autoFactoryV5', JSON.stringify(state));
-}
+export function saveGame() { localStorage.setItem('autoFactoryV5', JSON.stringify(state)); }
 
 export function loadGame() {
     const s = localStorage.getItem('autoFactoryV5');
@@ -149,132 +144,5 @@ export function loadGame() {
             CONFIG.machines.forEach(m => { if(typeof state.machines[m.id] === 'undefined') state.machines[m.id] = 0; });
             if (state.quests.length === 0) state.quests = JSON.parse(JSON.stringify(CONFIG.quests));
         } catch(e) { console.error("Erreur chargement", e); }
-    }
-}
-
-function evaluateCondition(conditionStr) {
-    try {
-        const evalStr = conditionStr.replace(/machines\./g, 'state.machines.');
-        return eval(evalStr);
-    } catch (e) {
-        return false;
-    }
-}
-
-function checkQuests() {
-    return state.quests.some(q => !q.claimed && evaluateCondition(q.condition));
-}
-
-export function scheduleNextEvent() {
-    const delay = Math.floor(Math.random() * (CONFIG.game.eventMaxTime - CONFIG.game.eventMinTime) + CONFIG.game.eventMinTime) * 1000;
-    state.nextEventTime = Date.now() + delay;
-    return delay;
-}
-
-export function triggerRandomEvent() {
-    if (state.eventActive) return false;
-    const event = CONFIG.events[Math.floor(Math.random() * CONFIG.events.length)];
-    state.eventActive = true;
-    state.eventConfig = event;
-    state.eventTimer = event.duration;
-    startEventTimer(event.duration);
-    return true;
-}
-
-export function gameLoop() {
-    if (!state.branch) return;
-
-    if (!state.eventActive && Date.now() >= state.nextEventTime) {
-        triggerRandomEvent();
-        scheduleNextEvent();
-    }
-
-    const branchCfg = CONFIG.branches[state.branch];
-
-    let rawPieces = calculateProduction('pieces');
-    let finalPieces = rawPieces * branchCfg.mult;
-    if (state.branch === 'magic') finalPieces *= branchCfg.passive;
-    finalPieces *= 1 + state.prestigeCount * CONFIG.game.prestigeMult;
-    if (state.overclockActive) {
-        const tier = CONFIG.overclockTiers.find(t => t.id === state.overclockTier);
-        if (tier) finalPieces *= 1 + tier.bonus;
-    }
-    if (state.eventActive && state.eventConfig.type !== 'data') {
-        finalPieces *= state.eventConfig.multiplier;
-    }
-    if (state.branch === 'logic' && Math.random() < branchCfg.risk) {
-        finalPieces = 0;
-    }
-    state.pieces += finalPieces;
-
-    let rawData = calculateProduction('data');
-    let finalData = rawData * branchCfg.mult;
-    if (state.branch === 'magic') finalData *= branchCfg.passive;
-    finalData *= 1 + state.prestigeCount * CONFIG.game.prestigeMult;
-    if (state.overclockActive) {
-        const tier = CONFIG.overclockTiers.find(t => t.id === state.overclockTier);
-        if (tier) finalData *= 1 + tier.bonus;
-    }
-    if (state.eventActive && state.eventConfig.type !== 'pieces') {
-        finalData *= state.eventConfig.multiplier;
-    }
-    if (state.branch === 'social') finalData *= branchCfg.dataBoost;
-
-    state.donnees += finalData;
-    state.totalDataEarned += finalData;
-
-    if (state.overclockActive) {
-        state.overclockTimer--;
-        if (state.overclockTimer <= 0) deactivateOverclock();
-    }
-
-    if (state.eventActive) {
-        state.eventTimer--;
-        if (state.eventTimer <= 0) deactivateEvent();
-    }
-
-    checkQuests();
-    saveGame();
-}
-
-export function startOcTimer(duration) {
-    state.overclockTimer = duration;
-    if (ocTimer) clearInterval(ocTimer);
-    ocTimer = setInterval(() => {
-        state.overclockTimer--;
-        if (state.overclockTimer <= 0) {
-            deactivateOverclock();
-        }
-    }, 1000);
-}
-
-export function startEventTimer(duration) {
-    state.eventTimer = duration;
-    if (eventTimer) clearInterval(eventTimer);
-    eventTimer = setInterval(() => {
-        state.eventTimer--;
-        if (state.eventTimer <= 0) {
-            deactivateEvent();
-        }
-    }, 1000);
-}
-
-export function deactivateOverclock() {
-    state.overclockActive = false;
-    state.overclockTier = 0;
-    state.overclockTimer = 0;
-    if (ocTimer) {
-        clearInterval(ocTimer);
-        ocTimer = null;
-    }
-}
-
-export function deactivateEvent() {
-    state.eventActive = false;
-    state.eventTimer = 0;
-    state.eventConfig = null;
-    if (eventTimer) {
-        clearInterval(eventTimer);
-        eventTimer = null;
     }
 }

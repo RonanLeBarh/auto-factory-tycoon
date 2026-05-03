@@ -1,11 +1,12 @@
-// Point d'entrée qui initialise tout
-
-import { state, timer, ocTimer, eventTimer, loadGame, saveGame, selectBranch, manualClick, activateOverclock, doPrestige, gameLoop, scheduleNextEvent, triggerRandomEvent, startOcTimer, startEventTimer, deactivateOverclock, deactivateEvent } from './game.js';
+import { state, loadGame, saveGame, selectBranch, manualClick, activateOverclock, doPrestige, manualClick, activateOverclock, doPrestige, gameLoop, scheduleNextEvent, triggerRandomEvent, startTimers, stopTimers, deactivateOverclock, deactivateEvent } from './game.js';
 import { updateUI, renderShop, renderQuests } from './ui.js';
 import { CONFIG } from './config.js';
 
-// Pour simplifier, on garde juste le timer principal ici
+// Redéfinir les exports nécessaires pour main.js si besoin, ou importer directement
+// Pour simplifier, on réinitialise les timers ici
 let timerRef = null;
+let ocTimerRef = null;
+let eventTimerRef = null;
 
 export function init() {
     loadGame();
@@ -29,16 +30,10 @@ export function startGame() {
     if (!state.nextEventTime || state.nextEventTime < Date.now()) {
         scheduleNextEvent();
     }
-
-    timerRef = setInterval(gameLoop, 1000);
-    setInterval(updateUI, 100);
     
-    if (state.overclockActive) {
-        startOcTimer(state.overclockTimer);
-    }
-    if (state.eventActive) {
-        startEventTimer(state.eventTimer);
-    }
+    startTimers();
+    // UI update rapide
+    setInterval(updateUI, 100);
 }
 
 export function updateBranchBadge() {
@@ -50,7 +45,6 @@ export function updateBranchBadge() {
     }
 }
 
-// Fonctions globales pour les boutons HTML
 window.selectBranch = (type) => {
     selectBranch(type);
     saveGame();
@@ -67,7 +61,10 @@ window.manualClick = () => {
 window.activateOverclock = (id) => {
     if (activateOverclock(id)) {
         const tier = CONFIG.overclockTiers.find(t => t.id === id);
-        startOcTimer(tier.duration);
+        // Le timer est géré par startTimers() qui est appelé dans startGame(), 
+        // mais ici on doit s'assurer que le timer OC est lancé si ce n'est pas déjà fait.
+        // Pour simplifier, on relance startTimers qui détectera l'état actif.
+        startTimers(); 
         showOcModal(tier);
         updateUI();
         saveGame();
@@ -78,7 +75,7 @@ window.activateOverclock = (id) => {
 window.doPrestige = () => {
     if (doPrestige()) {
         saveGame();
-        clearInterval(timerRef);
+        stopTimers();
         document.getElementById('start-screen').classList.remove('hidden');
         document.getElementById('game-screen').classList.add('hidden');
         updateUI();
@@ -98,14 +95,22 @@ function showOcModal(tier) {
     document.getElementById('oc-modal').style.display = 'flex';
     document.getElementById('oc-title').innerText = `OVERCLOCK NIVEAU ${tier.id} !`;
     document.getElementById('oc-desc').innerHTML = `Bonus: +${tier.bonus*100}%<br>Duration: ${tier.duration}s`;
-    document.getElementById('oc-status').innerText = `NIVEAU ${tier.id}`;
-    document.getElementById('oc-status').classList.add('overclock-active');
 }
 
 function log(msg) {
     const area = document.getElementById('game-log');
     if(area) area.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}<br>` + area.innerHTML;
 }
+
+// Import des fonctions de game.js qui étaient exportées mais pas utilisées dans ui.js
+// On les ré-exporte ici pour que main.js puisse les appeler
+import { gameLoop, scheduleNextEvent, triggerRandomEvent, startOcTimer, startEventTimer, deactivateOverclock, deactivateEvent, manualClick } from './game.js';
+
+// Redéfinition des timers globaux pour main.js
+// Note: Dans une vraie app, on gérerait mieux les imports cycliques.
+// Ici, on assume que game.js a les fonctions et on les appelle.
+// Pour que cela fonctionne, il faut que game.js exporte les fonctions de timer.
+// J'ai ajouté les exports dans game.js plus haut.
 
 // Initialisation
 init();

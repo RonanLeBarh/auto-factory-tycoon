@@ -1,25 +1,11 @@
-// Configuration et constantes
-
 export const CONFIG = {
-    game: {
-        startRes: 0,
-        clickBase: 1,
-        prestigeReq: 10000,
-        prestigeMult: 0.10,
-        eventCheckInterval: 10, // Vérifier un événement toutes les 10s
-        eventMinTime: 30, // Min secondes entre événements
-        eventMaxTime: 120 // Max secondes entre événements
-    },
-    branches: {
-        logic: { name: "Logique", color: "#3b82f6", mult: 2.5, risk: 0.15 },
-        magic: { name: "Magie", color: "#a855f7", mult: 0.5, passive: 3.0 },
-        social: { name: "Social", color: "#22c55e", mult: 1.2, dataBoost: 2.0 }
-    },
+    game: { startRes: 0, clickBase: 1, prestigeReq: 10000, prestigeMult: 0.10, eventCheckInterval: 10, eventMinTime: 30, eventMaxTime: 120 },
+    branches: { logic: { name: "Logique", color: "#3b82f6", mult: 2.5, risk: 0.15 }, magic: { name: "Magie", color: "#a855f7", mult: 0.5, passive: 3.0 }, social: { name: "Social", color: "#22c55e", mult: 1.2, dataBoost: 2.0 } },
     overclockTiers: [
-        { id: 1, name: "Niveau 1", bonus: 0.30, duration: 60, cost: 50, unlockData: 0 },   // 0.30 = +30%
-        { id: 2, name: "Niveau 2", bonus: 0.50, duration: 90, cost: 200, unlockData: 500 }, // 0.50 = +50%
-        { id: 3, name: "Niveau 3", bonus: 1.00, duration: 120, cost: 1000, unlockData: 2000 }, // 1.00 = +100%
-        { id: 4, name: "Niveau 4", bonus: 1.50, duration: 180, cost: 5000, unlockData: 10000 } // 1.50 = +150%
+        { id: 1, name: "Niveau 1", bonus: 0.30, duration: 60, cost: 50, unlockData: 0 },
+        { id: 2, name: "Niveau 2", bonus: 0.50, duration: 90, cost: 200, unlockData: 500 },
+        { id: 3, name: "Niveau 3", bonus: 1.00, duration: 120, cost: 1000, unlockData: 2000 },
+        { id: 4, name: "Niveau 4", bonus: 1.50, duration: 180, cost: 5000, unlockData: 10000 }
     ],
     machines: [
         { id: 'hand', name: "Main d'œuvre", baseCost: 15, baseProd: 0.5, dataProd: 0, desc: "Ouvrier basique." },
