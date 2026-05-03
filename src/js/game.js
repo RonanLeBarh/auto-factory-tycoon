@@ -18,20 +18,51 @@ export function startTimers() {
     if (gameLoopId) clearInterval(gameLoopId);
     gameLoopId = setInterval(gameLoop, 1000);
     
+    // Gestion Overclock
     if (state.overclockActive) {
         if (ocLoopId) clearInterval(ocLoopId);
         ocLoopId = setInterval(() => {
             state.overclockTimer--;
+            
+            // --- CORRECTION : Mise à jour de l'UI du minuteur ---
+            const countdownEl = document.getElementById('oc-countdown');
+            const timerBox = document.getElementById('oc-timer');
+            const percentEl = document.getElementById('oc-percent');
+            
+            if (countdownEl) countdownEl.innerText = state.overclockTimer;
+            if (timerBox) timerBox.style.display = 'block'; // Assure que la boîte est visible
+            
+            // Mise à jour du pourcentage affiché dans le timer
+            if (percentEl && state.overclockTier) {
+                const tier = CONFIG.overclockTiers.find(t => t.id === state.overclockTier);
+                if (tier) percentEl.innerText = "+" + Math.round(tier.bonus * 100);
+            }
+            // -----------------------------------------------
+
             if (state.overclockTimer <= 0) deactivateOverclock();
         }, 1000);
+    } else {
+        // Si pas actif, on cache la boîte du timer
+        const timerBox = document.getElementById('oc-timer');
+        if (timerBox) timerBox.style.display = 'none';
     }
-    
+
+    // Gestion Event
     if (state.eventActive) {
         if (eventLoopId) clearInterval(eventLoopId);
         eventLoopId = setInterval(() => {
             state.eventTimer--;
+            // MISE À JOUR DE L'AFFICHAGE HTML (Manquant avant)
+            const eventCountdownEl = document.getElementById('event-countdown');
+            const eventTimerBox = document.getElementById('event-timer');
+            if (eventCountdownEl) eventCountdownEl.innerText = state.eventTimer;
+            if (eventTimerBox) eventTimerBox.style.display = 'block';
+
             if (state.eventTimer <= 0) deactivateEvent();
         }, 1000);
+    } else {
+        const eventTimerBox = document.getElementById('event-timer');
+        if (eventTimerBox) eventTimerBox.style.display = 'none';
     }
 }
 
@@ -109,14 +140,28 @@ export function doPrestige() {
         if (state.branch === 'magic') prodP *= CONFIG.branches.magic.passive;
     }
     prodP *= (1 + (state.prestigeCount * CONFIG.game.prestigeMult));
+    
     if (prodP < CONFIG.game.prestigeReq) return false;
 
-    state.pieces = 0; state.donnees = 0; state.totalDataEarned = 0;
+    // --- CORRECTION : Ajout de la confirmation ---
+    if (!confirm("REBORN CONFIRMÉ ?\n- Vous perdez tout (Pièces, Données, Machines, Quêtes).\n- Vous gardez le bonus de prestige.\n- Vous pouvez choisir une NOUVELLE branche.")) {
+        return false; // Annule l'opération si l'utilisateur clique sur "Annuler"
+    }
+    // ---------------------------------------------
+
+    state.pieces = 0; 
+    state.donnees = 0; 
+    state.totalDataEarned = 0;
     CONFIG.machines.forEach(m => state.machines[m.id] = 0);
     state.quests = JSON.parse(JSON.stringify(CONFIG.quests));
-    state.overclockActive = false; state.overclockTier = 0; state.overclockTimer = 0;
-    state.eventActive = false; state.eventTimer = 0; state.eventConfig = null;
-    state.prestigeCount++; state.branch = null;
+    state.overclockActive = false; 
+    state.overclockTier = 0; 
+    state.overclockTimer = 0;
+    state.eventActive = false; 
+    state.eventTimer = 0; 
+    state.eventConfig = null;
+    state.prestigeCount++; 
+    state.branch = null;
     return true;
 }
 

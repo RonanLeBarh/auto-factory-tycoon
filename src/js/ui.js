@@ -86,14 +86,6 @@ export function updateUI() {
     // Calcul Réel
     let realProdP = baseProdP;
     let realProdD = baseProdD;
-    if (state.overclockActive) {
-        const tier = CONFIG.overclockTiers.find(t => t.id === state.overclockTier);
-        if (tier) { realProdP *= (1 + tier.bonus); realProdD *= (1 + tier.bonus); }
-    }
-    if (state.eventActive) {
-        if (state.eventConfig.type !== 'data') realProdP *= state.eventConfig.multiplier;
-        if (state.eventConfig.type !== 'pieces') realProdD *= state.eventConfig.multiplier;
-    }
 
     // Header
     document.getElementById('bps-display').innerText = baseProdP.toFixed(1);
@@ -186,7 +178,12 @@ export function updateUI() {
     if (state.overclockActive) {
         const tier = CONFIG.overclockTiers.find(t => t.id === state.overclockTier);
         document.getElementById('oc-percent').innerText = "+" + Math.round(tier.bonus * 100);
-    } else { document.getElementById('oc-percent').innerText = "0"; }
+        document.getElementById('oc-countdown').innerText = state.overclockTimer;
+        document.getElementById('oc-timer').style.display = 'block';
+    } else { 
+        document.getElementById('oc-percent').innerText = "0";
+        document.getElementById('oc-timer').style.display = 'none';
+    }
 }
 
 // Helper global pour les onclicks HTML
