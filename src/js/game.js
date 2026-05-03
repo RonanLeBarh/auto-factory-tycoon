@@ -107,6 +107,15 @@ export function doPrestige() {
 
     if (prodP < CONFIG.game.prestigeReq) return false;
 
+    if (ocTimer) {
+        clearInterval(ocTimer);
+        ocTimer = null;
+    }
+    if (eventTimer) {
+        clearInterval(eventTimer);
+        eventTimer = null;
+    }
+
     state.pieces = 0;
     state.donnees = 0;
     state.totalDataEarned = 0;
@@ -140,5 +149,132 @@ export function loadGame() {
             CONFIG.machines.forEach(m => { if(typeof state.machines[m.id] === 'undefined') state.machines[m.id] = 0; });
             if (state.quests.length === 0) state.quests = JSON.parse(JSON.stringify(CONFIG.quests));
         } catch(e) { console.error("Erreur chargement", e); }
+    }
+}
+
+function evaluateCondition(conditionStr) {
+    try {
+        const evalStr = conditionStr.replace(/machines\./g, 'state.machines.');
+        return eval(evalStr);
+    } catch (e) {
+        return false;
+    }
+}
+
+function checkQuests() {
+    return state.quests.some(q => !q.claimed && evaluateCondition(q.condition));
+}
+
+export function scheduleNextEvent() {
+    const delay = Math.floor(Math.random() * (CONFIG.game.eventMaxTime - CONFIG.game.eventMinTime) + CONFIG.game.eventMinTime) * 1000;
+    state.nextEventTime = Date.now() + delay;
+    return delay;
+}
+
+export function triggerRandomEvent() {
+    if (state.eventActive) return false;
+    const event = CONFIG.events[Math.floor(Math.random() * CONFIG.events.length)];
+    state.eventActive = true;
+    state.eventConfig = event;
+    state.eventTimer = event.duration;
+    startEventTimer(event.duration);
+    return true;
+}
+
+export function gameLoop() {
+    if (!state.branch) return;
+
+    if (!state.eventActive && Date.now() >= state.nextEventTime) {
+        triggerRandomEvent();
+        scheduleNextEvent();
+    }
+
+    const branchCfg = CONFIG.branches[state.branch];
+
+    let rawPieces = calculateProduction('pieces');
+    let finalPieces = rawPieces * branchCfg.mult;
+    if (state.branch === 'magic') finalPieces *= branchCfg.passive;
+    finalPieces *= 1 + state.prestigeCount * CONFIG.game.prestigeMult;
+    if (state.overclockActive) {
+        const tier = CONFIG.overclockTiers.find(t => t.id === state.overclockTier);
+        if (tier) finalPieces *= 1 + tier.bonus;
+    }
+    if (state.eventActive && state.eventConfig.type !== 'data') {
+        finalPieces *= state.eventConfig.multiplier;
+    }
+    if (state.branch === 'logic' && Math.random() < branchCfg.risk) {
+        finalPieces = 0;
+    }
+    state.pieces += finalPieces;
+
+    let rawData = calculateProduction('data');
+    let finalData = rawData * branchCfg.mult;
+    if (state.branch === 'magic') finalData *= branchCfg.passive;
+    finalData *= 1 + state.prestigeCount * CONFIG.game.prestigeMult;
+    if (state.overclockActive) {
+        const tier = CONFIG.overclockTiers.find(t => t.id === state.overclockTier);
+        if (tier) finalData *= 1 + tier.bonus;
+    }
+    if (state.eventActive && state.eventConfig.type !== 'pieces') {
+        finalData *= state.eventConfig.multiplier;
+    }
+    if (state.branch === 'social') finalData *= branchCfg.dataBoost;
+
+    state.donnees += finalData;
+    state.totalDataEarned += finalData;
+
+    if (state.overclockActive) {
+        state.overclockTimer--;
+        if (state.overclockTimer <= 0) deactivateOverclock();
+    }
+
+    if (state.eventActive) {
+        state.eventTimer--;
+        if (state.eventTimer <= 0) deactivateEvent();
+    }
+
+    checkQuests();
+    saveGame();
+}
+
+export function startOcTimer(duration) {
+    state.overclockTimer = duration;
+    if (ocTimer) clearInterval(ocTimer);
+    ocTimer = setInterval(() => {
+        state.overclockTimer--;
+        if (state.overclockTimer <= 0) {
+            deactivateOverclock();
+        }
+    }, 1000);
+}
+
+export function startEventTimer(duration) {
+    state.eventTimer = duration;
+    if (eventTimer) clearInterval(eventTimer);
+    eventTimer = setInterval(() => {
+        state.eventTimer--;
+        if (state.eventTimer <= 0) {
+            deactivateEvent();
+        }
+    }, 1000);
+}
+
+export function deactivateOverclock() {
+    state.overclockActive = false;
+    state.overclockTier = 0;
+    state.overclockTimer = 0;
+    if (ocTimer) {
+        clearInterval(ocTimer);
+        ocTimer = null;
+    }
+}
+
+export function deactivateEvent() {
+    state.eventActive = false;
+    state.eventTimer = 0;
+    state.eventConfig = null;
+    if (eventTimer) {
+        clearInterval(eventTimer);
+        eventTimer = null;
     }
 }

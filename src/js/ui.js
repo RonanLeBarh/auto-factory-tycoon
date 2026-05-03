@@ -1,6 +1,6 @@
 // Gestion de l'interface : DOM, événements
 
-import { state, calculateProduction, buyMachine, manualClick, activateOverclock, claimQuest, doPrestige, selectBranch, saveGame } from './game.js';
+import { state, calculateProduction, buyMachine, manualClick, activateOverclock, claimQuest, doPrestige, saveGame } from './game.js';
 import { CONFIG } from './config.js';
 
 export function renderShop() {
