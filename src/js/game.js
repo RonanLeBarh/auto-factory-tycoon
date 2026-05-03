@@ -111,18 +111,7 @@ export function doPrestige() {
     prodP *= (1 + (state.prestigeCount * CONFIG.game.prestigeMult));
     if (prodP < CONFIG.game.prestigeReq) return false;
 
-    if (ocTimer) {
-        clearInterval(ocTimer);
-        ocTimer = null;
-    }
-    if (eventTimer) {
-        clearInterval(eventTimer);
-        eventTimer = null;
-    }
-
-    state.pieces = 0;
-    state.donnees = 0;
-    state.totalDataEarned = 0;
+    state.pieces = 0; state.donnees = 0; state.totalDataEarned = 0;
     CONFIG.machines.forEach(m => state.machines[m.id] = 0);
     state.quests = JSON.parse(JSON.stringify(CONFIG.quests));
     state.overclockActive = false; state.overclockTier = 0; state.overclockTimer = 0;
@@ -145,4 +134,60 @@ export function loadGame() {
             if (state.quests.length === 0) state.quests = JSON.parse(JSON.stringify(CONFIG.quests));
         } catch(e) { console.error("Erreur chargement", e); }
     }
+}
+
+export function gameLoop() {
+    if (!state.branch) return;
+    if (!state.eventActive && Date.now() >= state.nextEventTime) {
+        triggerRandomEvent();
+        scheduleNextEvent();
+    }
+    let branchCfg = CONFIG.branches[state.branch];
+    let rawPieces = calculateProduction('pieces');
+    let finalPieces = rawPieces * branchCfg.mult;
+    if (state.branch === 'magic') finalPieces *= branchCfg.passive;
+    finalPieces *= (1 + (state.prestigeCount * CONFIG.game.prestigeMult));
+    if (state.overclockActive) {
+        const tier = CONFIG.overclockTiers.find(t => t.id === state.overclockTier);
+        if (tier) finalPieces *= (1 + tier.bonus);
+    }
+    if (state.eventActive && state.eventConfig.type !== 'data') finalPieces *= state.eventConfig.multiplier;
+    if (state.branch === 'logic' && Math.random() < branchCfg.risk) finalPieces = 0;
+    state.pieces += finalPieces;
+
+    let rawData = calculateProduction('data');
+    let finalData = rawData * branchCfg.mult;
+    if (state.branch === 'magic') finalData *= branchCfg.passive;
+    finalData *= (1 + (state.prestigeCount * CONFIG.game.prestigeMult));
+    if (state.overclockActive) {
+        const tier = CONFIG.overclockTiers.find(t => t.id === state.overclockTier);
+        if (tier) finalData *= (1 + tier.bonus);
+    }
+    if (state.eventActive && state.eventConfig.type !== 'pieces') finalData *= state.eventConfig.multiplier;
+    if (state.branch === 'social') finalData *= branchCfg.dataBoost;
+    state.donnees += finalData;
+    state.totalDataEarned += finalData;
+}
+
+export function scheduleNextEvent() {
+    const delay = Math.floor(Math.random() * (CONFIG.game.eventMaxTime - CONFIG.game.eventMinTime) + CONFIG.game.eventMinTime) * 1000;
+    state.nextEventTime = Date.now() + delay;
+}
+
+export function triggerRandomEvent() {
+    if (state.eventActive) return;
+    const event = CONFIG.events[Math.floor(Math.random() * CONFIG.events.length)];
+    state.eventActive = true;
+    state.eventConfig = event;
+    state.eventTimer = event.duration;
+}
+
+export function deactivateOverclock() {
+    state.overclockActive = false; state.overclockTier = 0; state.overclockTimer = 0;
+    if (ocLoopId) clearInterval(ocLoopId);
+}
+
+export function deactivateEvent() {
+    state.eventActive = false; state.eventTimer = 0; state.eventConfig = null;
+    if (eventLoopId) clearInterval(eventLoopId);
 }

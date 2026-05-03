@@ -1,12 +1,6 @@
-import { state, loadGame, saveGame, selectBranch, manualClick, activateOverclock, doPrestige, manualClick, activateOverclock, doPrestige, gameLoop, scheduleNextEvent, triggerRandomEvent, startTimers, stopTimers, deactivateOverclock, deactivateEvent } from './game.js';
+import { state, loadGame, saveGame, selectBranch, manualClick, activateOverclock, doPrestige, gameLoop, scheduleNextEvent, triggerRandomEvent, startTimers, stopTimers, deactivateOverclock, deactivateEvent } from './game.js';
 import { updateUI, renderShop, renderQuests } from './ui.js';
 import { CONFIG } from './config.js';
-
-// Redéfinir les exports nécessaires pour main.js si besoin, ou importer directement
-// Pour simplifier, on réinitialise les timers ici
-let timerRef = null;
-let ocTimerRef = null;
-let eventTimerRef = null;
 
 export function init() {
     loadGame();
@@ -102,15 +96,4 @@ function log(msg) {
     if(area) area.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}<br>` + area.innerHTML;
 }
 
-// Import des fonctions de game.js qui étaient exportées mais pas utilisées dans ui.js
-// On les ré-exporte ici pour que main.js puisse les appeler
-import { gameLoop, scheduleNextEvent, triggerRandomEvent, startOcTimer, startEventTimer, deactivateOverclock, deactivateEvent, manualClick } from './game.js';
-
-// Redéfinition des timers globaux pour main.js
-// Note: Dans une vraie app, on gérerait mieux les imports cycliques.
-// Ici, on assume que game.js a les fonctions et on les appelle.
-// Pour que cela fonctionne, il faut que game.js exporte les fonctions de timer.
-// J'ai ajouté les exports dans game.js plus haut.
-
-// Initialisation
 init();
